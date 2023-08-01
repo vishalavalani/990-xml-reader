@@ -79,7 +79,7 @@ class Filing(object):
             for key in entity.keys():
                 newkey = key
                 if ":" in key:
-                    newkey = key.split(":")[1]
+                    newkey = key.split(":")[1]                    
                 newvalue = entity[key]
                 if type(newvalue) == listType or type(newvalue) == orderedDictType or type(newvalue) == dictType:
                     newvalue = self._denamespacify(newvalue)
@@ -90,7 +90,7 @@ class Filing(object):
             newlist = list()
             for item in entity:
                 newvalue = item
-                if type(newvalue) == listType or type(newvalue) == orderedDictType:
+                if type(newvalue) == listType or type(newvalue) == orderedDictType or type(newvalue) == dictType:
                     newvalue = self._denamespacify(newvalue)
                 newlist.append(newvalue)
             return newlist
@@ -103,7 +103,6 @@ class Filing(object):
         with io.open(self.filepath, 'r', encoding='utf-8-sig') as fh:
             raw_file = fh.read()
             try:
-
                 self.raw_irs_dict = self._denamespacify(xmltodict.parse(raw_file))
             except ExpatError:
                 raise InvalidXMLException(
