@@ -93,45 +93,45 @@ class SkedDictReader(object):
             standardized_group_dict = self._get_table_start()
 
             for xpath in flattened_list_item.keys():
-                if '@' in xpath:
+                # if '@' in xpath:
+                #     continue
+                # else:
+                xpath = xpath.replace("/#text", "")
+                value = flattened_list_item[xpath]
+
+                if self.csv_format:
+                    this_var = {
+                        'xpath':xpath,
+                        'value':value,
+                        'in_group':True,
+                        'group_name':this_group['db_name'],
+                        'group_index':node_index
+                    }
+                    self.for_csv_list.append(this_var)
+
+                try:
+                    this_var_data = self.standardizer.get_var(xpath)
+                except KeyError:
+                    if not ignorable_keyerror(xpath):
+                        self.variable_keyerrors.append(
+                            {'element_path':xpath}
+                        )
                     continue
+                this_var_value = flattened_list_item[xpath]
+                this_var_name = this_var_data['db_name']
+                table_name = this_var_data['db_table']
+                if self.documentation:
+                    result = {
+                        'value': this_var_value,
+                        'ordering': this_var_data['ordering'],
+                        'line_number': this_var_data['line_number'],
+                        'description': this_var_data['description'],
+                        'db_type': this_var_data['db_type']
+                    }
+                    standardized_group_dict[this_var_name] = result
+
                 else:
-                    xpath = xpath.replace("/#text", "")
-                    value = flattened_list_item[xpath]
-
-                    if self.csv_format:
-                        this_var = {
-                            'xpath':xpath,
-                            'value':value,
-                            'in_group':True,
-                            'group_name':this_group['db_name'],
-                            'group_index':node_index
-                        }
-                        self.for_csv_list.append(this_var)
-
-                    try:
-                        this_var_data = self.standardizer.get_var(xpath)
-                    except KeyError:
-                        if not ignorable_keyerror(xpath):
-                            self.variable_keyerrors.append(
-                                {'element_path':xpath}
-                            )
-                        continue
-                    this_var_value = flattened_list_item[xpath]
-                    this_var_name = this_var_data['db_name']
-                    table_name = this_var_data['db_table']
-                    if self.documentation:
-                        result = {
-                            'value': this_var_value,
-                            'ordering': this_var_data['ordering'],
-                            'line_number': this_var_data['line_number'],
-                            'description': this_var_data['description'],
-                            'db_type': this_var_data['db_type']
-                        }
-                        standardized_group_dict[this_var_name] = result
-
-                    else:
-                        standardized_group_dict[this_var_name] = this_var_value
+                    standardized_group_dict[this_var_name] = this_var_value
             try:
                 self.repeating_groups[table_name].append(standardized_group_dict)
             except KeyError:
@@ -155,67 +155,67 @@ class SkedDictReader(object):
 
         elif this_node_type == unicodeType:
             # but ignore it if is an @.
-            if '@' in element_path:
-                pass
-            else:
-                element_path = element_path.replace("/#text", "")
+            # if '@' in element_path:
+            #     pass
+            # else:
+            element_path = element_path.replace("/#text", "")
+            try:
+                # is it a group?
+                this_group = self.groups[element_path]
+                self._process_group(
+                    [{parent_path: json_node}],
+                    '',
+                    this_group
+                )
+
+            except KeyError:
+
+                # It's not a group so it should be a variable we know about
+                
+                if self.csv_format:
+                    this_var = {
+                        'xpath':element_path,
+                        'value':json_node,
+                        'in_group':False,
+                        'group_name':None,
+                        'group_index':None
+                    }
+                    self.for_csv_list.append(this_var)
+
+                # It's not a group so it should be a variable we know about
                 try:
-                    # is it a group?
-                    this_group = self.groups[element_path]
-                    self._process_group(
-                        [{parent_path: json_node}],
-                        '',
-                        this_group
-                    )
+                    var_data = self.standardizer.get_var(element_path)
+                    var_found = True
 
                 except KeyError:
+                    # pass through for some common key errors
+                    # [ TODO: FIX THE KEYERRORS! ]
+                    if not ignorable_keyerror(element_path):
+                        self.variable_keyerrors.append(
+                            {'element_path':element_path}
+                        )
+                    var_found = False
 
-                    # It's not a group so it should be a variable we know about
-                    
-                    if self.csv_format:
-                        this_var = {
-                            'xpath':element_path,
-                            'value':json_node,
-                            'in_group':False,
-                            'group_name':None,
-                            'group_index':None
+                if var_found:
+
+                    table_name = var_data['db_table']
+                    var_name = var_data['db_name']
+
+                    result = json_node
+                    if self.documentation:
+                        result = {
+                            'value': json_node,
+                            'ordering': var_data['ordering'],
+                            'line_number': var_data['line_number'],
+                            'description': var_data['description'],
+                            'db_type': var_data['db_type']
                         }
-                        self.for_csv_list.append(this_var)
 
-                    # It's not a group so it should be a variable we know about
                     try:
-                        var_data = self.standardizer.get_var(element_path)
-                        var_found = True
-
+                        self.schedule_parts[table_name][var_name] = result
                     except KeyError:
-                        # pass through for some common key errors
-                        # [ TODO: FIX THE KEYERRORS! ]
-                        if not ignorable_keyerror(element_path):
-                            self.variable_keyerrors.append(
-                                {'element_path':element_path}
-                            )
-                        var_found = False
-
-                    if var_found:
-
-                        table_name = var_data['db_table']
-                        var_name = var_data['db_name']
-
-                        result = json_node
-                        if self.documentation:
-                            result = {
-                                'value': json_node,
-                                'ordering': var_data['ordering'],
-                                'line_number': var_data['line_number'],
-                                'description': var_data['description'],
-                                'db_type': var_data['db_type']
-                            }
-
-                        try:
-                            self.schedule_parts[table_name][var_name] = result
-                        except KeyError:
-                            self.schedule_parts[table_name] = self._get_table_start()
-                            self.schedule_parts[table_name][var_name] = result
+                        self.schedule_parts[table_name] = self._get_table_start()
+                        self.schedule_parts[table_name][var_name] = result
 
 
         elif this_node_type == orderedDictType or this_node_type == dictType:
