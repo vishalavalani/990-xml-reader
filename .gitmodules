@@ -1,7 +1,7 @@
 [submodule "irs_reader/metadata"]
 	path = irs_reader/metadata
-	url = git@github.com:propublica/990-xml-metadata.git
+	url = ../990-xml-metadata.git
 [submodule "metadata"]
 	path = metadata
-	url = git@github.com:propublica/990-xml-metadata.git
+	url = ../990-xml-metadata.git
 
